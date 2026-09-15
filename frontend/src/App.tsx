@@ -4,6 +4,7 @@ import {
   BarChart3,
   Database,
   GitCompareArrows,
+  Search,
   Shield,
   Sparkles,
 } from "lucide-react";
@@ -12,8 +13,9 @@ import { IconBlock } from "./components/IconBlock";
 import { CompetenciasModule } from "./modules/competencias/CompetenciasModule";
 import { EquiposModule } from "./modules/equipos/EquiposModule";
 import { VersusModule } from "./modules/versus/VersusModule";
+import { ExplorarDataModule } from "./modules/explorar/ExplorarDataModule";
 
-type Module = "competencias" | "equipos" | "versus";
+type Module = "competencias" | "equipos" | "versus" | "explorar";
 export default function App() {
   const [active, setActive] = useState<Module>("competencias");
   const [competitions, setCompetitions] = useState<Competition[]>([]);
@@ -32,6 +34,7 @@ export default function App() {
     { id: "competencias" as Module, label: "Competencias", icon: BarChart3 },
     { id: "equipos" as Module, label: "Equipos", icon: Shield },
     { id: "versus" as Module, label: "Versus", icon: GitCompareArrows },
+    { id: "explorar" as Module, label: "Explorar data", icon: Search },
   ];
   return (
     <div className="appShell">
@@ -53,7 +56,14 @@ export default function App() {
               <Icon size={17} />
               <span>{label}</span>
               <small>
-                0{id === "competencias" ? 1 : id === "equipos" ? 2 : 3}
+                0
+                {id === "competencias"
+                  ? 1
+                  : id === "equipos"
+                    ? 2
+                    : id === "versus"
+                      ? 3
+                      : 4}
               </small>
             </button>
           ))}
@@ -100,6 +110,9 @@ export default function App() {
           )}
           {active === "versus" && (
             <VersusModule teams={teams} competitionCode={selectedCode} />
+          )}
+          {active === "explorar" && (
+            <ExplorarDataModule competitions={competitions} />
           )}
         </div>
         <footer>

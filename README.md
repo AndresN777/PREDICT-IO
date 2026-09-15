@@ -72,6 +72,15 @@ El modo demo permite revisar toda la aplicación antes de descargar o montar dat
 - Probabilidad de que ambos equipos marquen.
 - Nivel de confianza cualitativo.
 
+### Explorar data
+
+- Tabla paginada de partidos normalizados desde el parquet o dataset demo.
+- Búsqueda por nombre de equipo, competencia o código.
+- Filtros combinables por competencia, temporada, estado, fechas y cantidad total de goles.
+- Orden ascendente o descendente por fecha, competencia, equipos o goles.
+- Contadores de resultados, estado del dataset y navegación entre páginas.
+- Exportación CSV de la página actualmente visible.
+
 ### Plataforma
 
 - API documentada automáticamente por FastAPI.
@@ -79,6 +88,7 @@ El modo demo permite revisar toda la aplicación antes de descargar o montar dat
 - CORS configurable.
 - Docker Compose para levantar frontend y backend juntos.
 - Frontend responsive sin rutas: navegación por módulos en una única pantalla.
+- Endpoint de exploración con paginación para evitar cargar el dataset completo en el navegador.
 
 ## Arquitectura
 
@@ -331,6 +341,15 @@ GET /api/teams/{team_id}?competition_code=PL&season=2024
 GET /api/teams/compare?first_id=1&second_id=2&competition_code=PL&season=2024
 ```
 
+### Exploración de datos
+
+```http
+GET /api/explore?page=1&page_size=25&competition_code=PL&season=2024
+GET /api/explore?search=arsenal&status=FINISHED&min_goals=2&sort_by=goals&sort_order=desc
+```
+
+Parámetros opcionales: `search`, `competition_code`, `season`, `status`, `date_from`, `date_to`, `min_goals`, `max_goals`, `sort_by`, `sort_order`, `page` y `page_size`. La respuesta incluye `items`, `total`, `pages`, `facets` y la indicación `demo`.
+
 ### Predicción
 
 ```http
@@ -382,6 +401,7 @@ predict-io/
 		└── modules/
 			├── competencias/
 			├── equipos/
+			├── explorar/
 			└── versus/
 ```
 
@@ -408,6 +428,7 @@ curl http://localhost:8000/api/health
 curl http://localhost:8000/api/competitions
 curl "http://localhost:8000/api/teams?competition_code=PL"
 curl "http://localhost:8000/api/teams/compare?first_id=1&second_id=2&competition_code=PL"
+curl "http://localhost:8000/api/explore?page=1&page_size=25&status=FINISHED"
 ```
 
 Antes de una entrega conviene verificar:
@@ -417,6 +438,7 @@ Antes de una entrega conviene verificar:
 - Que el parquet se carga con `demo: false` cuando está montado.
 - Que los selectores de competencia y equipo devuelven datos.
 - Que comparar y predecir producen una respuesta visible en la interfaz.
+- Que explorar data permite aplicar filtros, ordenar columnas, paginar y exportar CSV.
 
 ## Solución de problemas
 

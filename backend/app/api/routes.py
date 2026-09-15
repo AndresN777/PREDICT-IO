@@ -28,6 +28,39 @@ def meta(request: Request):
     }
 
 
+@router.get("/explore")
+def explore(
+    request: Request,
+    search: str | None = None,
+    competition_code: str | None = None,
+    season: str | None = None,
+    status: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    min_goals: int | None = Query(default=None, ge=0, le=30),
+    max_goals: int | None = Query(default=None, ge=0, le=30),
+    sort_by: str = Query(default="matchDate"),
+    sort_order: str = Query(default="desc", pattern="^(asc|desc)$"),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=25, ge=10, le=100),
+):
+    data_service, _, _ = get_services(request)
+    return data_service.explore(
+        search=search,
+        competition_code=competition_code,
+        season=season,
+        status=status,
+        date_from=date_from,
+        date_to=date_to,
+        min_goals=min_goals,
+        max_goals=max_goals,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        page=page,
+        page_size=page_size,
+    )
+
+
 @router.get("/competitions", response_model=ListResponse)
 def competitions(request: Request):
     data_service, _, _ = get_services(request)
