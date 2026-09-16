@@ -193,3 +193,120 @@ class DataService:
         if season:
             frame = frame[frame["seasonKey"] == season]
         return frame.sort_values("matchDate", ascending=False).head(limit)
+
+    def explore(
+        self,
+        search: str | None = None,
+        competition_code: str | None = None,
+        season: str | None = None,
+        status: str | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        min_goals: int | None = None,
+        max_goals: int | None = None,
+        sort_by: str = "matchDate",
+        sort_order: str = "desc",
+        page: int = 1,
+        page_size: int = 25,
+    ) -> dict:
+        frame = self.data.copy()
+        if search:
+            term = search.strip().casefold()
+            searchable = (
+                frame[
+                    [
+                        "homeTeam.name",
+                        "awayTeam.name",
+                        "competition.name",
+                        "competitionCode",
+                    ]
+                ]
+                .fillna("")
+                .astype(str)
+                .agg(" ".join, axis=1)
+                .str.casefold()
+            )
+            frame = frame[searchable.str.contains(term, regex=False)]
+        if competition_code:
+            frame = frame[frame["competitionCode"].astype(str) == competition_code]
+        if season:
+            frame = frame[frame["seasonKey"].astype(str) == season]
+        if status:
+            frame = frame[frame["status"].astype(str) == status]
+        if date_from:
+            frame = frame[frame["matchDate"] >= pd.to_datetime(date_from, utc=True)]
+        if date_to:
+            end_date = pd.to_datetime(date_to, utc=True) + pd.Timedelta(days=1)
+            frame = frame[frame["matchDate"] < end_date]
+        total_goals = frame["homeGoals"].fillna(0) + frame["awayGoals"].fillna(0)
+        if min_goals is not None:
+            frame = frame[total_goals >= min_goals]
+        if max_goals is not None:
+            frame = frame[total_goals <= max_goals]
+
+        sort_columns = {
+            "matchDate": "matchDate",
+            "competition": "competition.name",
+            "home": "homeTeam.name",
+            "away": "awayTeam.name",
+            "goals": "totalGoals",
+        }
+        frame = frame.assign(totalGoals=total_goals.loc[frame.index])
+        frame = frame.sort_values(
+            sort_columns.get(sort_by, "matchDate"),
+            ascending=sort_order != "desc",
+            na_position="last",
+        )
+        total = len(frame)
+        start = (page - 1) * page_size
+        visible = frame.iloc[start : start + page_size]
+        records = []
+        for _, row in visible.iterrows():
+            records.append(
+                {
+                    "id": row.get("id"),
+                    "date": (
+                        row.get("matchDate").isoformat()
+                        if pd.notna(row.get("matchDate"))
+                        else None
+                    ),
+                    "status": row.get("status", "N/D"),
+                    "competition": row.get(
+                        "competition.name", row.get("competitionCode", "N/D")
+                    ),
+                    "competitionCode": row.get("competitionCode", "N/D"),
+                    "season": str(row.get("seasonKey", "N/D")),
+                    "homeTeam": row.get("homeTeam.name", "N/D"),
+                    "awayTeam": row.get("awayTeam.name", "N/D"),
+                    "homeGoals": (
+                        int(row["homeGoals"])
+                        if pd.notna(row.get("homeGoals"))
+                        else None
+                    ),
+                    "awayGoals": (
+                        int(row["awayGoals"])
+                        if pd.notna(row.get("awayGoals"))
+                        else None
+                    ),
+                    "totalGoals": int(row["totalGoals"]),
+                    "matchday": row.get("matchday"),
+                    "stage": row.get("stage", "N/D"),
+                }
+            )
+        return {
+            "items": records,
+            "total": total,
+            "page": page,
+            "pageSize": page_size,
+            "pages": max(1, (total + page_size - 1) // page_size),
+            "facets": {
+                "statuses": sorted(
+                    self.data["status"].dropna().astype(str).unique().tolist()
+                ),
+                "seasons": sorted(
+                    self.data["seasonKey"].dropna().astype(str).unique().tolist(),
+                    reverse=True,
+                ),
+            },
+            "demo": self.demo,
+        }
